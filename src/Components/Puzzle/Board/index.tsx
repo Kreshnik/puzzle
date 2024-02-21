@@ -13,7 +13,7 @@ const PuzzleBoard: React.FC<PuzzleBoardProps> = ({ numberOfPieces }) => {
     // Calculate rows and columns more flexibly
     const cols = Math.ceil(Math.sqrt(numberOfPieces));
     const rows = Math.ceil(numberOfPieces / cols);
-    const spacing = 1.1; // Space between pieces to ensure they don't overlap
+    const spacing = 1.01; // Space between pieces to ensure they don't overlap
 
     const { centerOffsetX, centerOffsetZ } = useMemo(() => {
         const offsetX = ((cols - 1) * spacing) / 2;
@@ -34,8 +34,9 @@ const PuzzleBoard: React.FC<PuzzleBoardProps> = ({ numberOfPieces }) => {
                 pieces.push(
                     <PuzzlePiece
                         key={`${i}-${j}`}
+                        index={i * cols + j}
                         position={[j * spacing, 0, i * spacing]} // Adjusted for xz plane
-                        rotation={[Math.PI / 2, 0, 0]}
+                        rotation={[-Math.PI / 2, 0, 0]}
                     />
                 );
             }

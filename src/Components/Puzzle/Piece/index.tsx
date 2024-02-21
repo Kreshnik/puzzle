@@ -1,53 +1,52 @@
-import React, { useRef } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import * as THREE from 'three';
 import { CSG } from 'three-csg-ts';
+import {useFrame} from "@react-three/fiber";
+import {useTexture} from "@react-three/drei";
 
 interface PuzzlePieceProps {
     position: [number, number, number];
     rotation?: [number, number, number];
     scale?: [number, number, number];
+    index: number;
 }
 
-const PuzzlePiece: React.FC<PuzzlePieceProps> = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }) => {
+const PuzzlePiece: React.FC<PuzzlePieceProps> = ({ position, rotation = [0, 0, 0], scale = [1, 1, 1], index }) => {
     const meshRef = useRef<THREE.Mesh>(null!);
+    const [isPickedUp, setIsPickedUp] = useState(false);
+    const [disappear, setDisappear] = useState(false);
 
-    const shape = new THREE.Shape();
+    const texture = useTexture(`https://picsum.photos/100/100?random=${index}`);
 
-    // Base rectangle
-    shape.moveTo(-0.5, -0.5);
-    shape.lineTo(-0.5, 0.5);
-    shape.lineTo(0.5, 0.5);
-    shape.lineTo(0.5, -0.5);
-    shape.lineTo(-0.5, -0.5);
-
-    // Add nobs and holes using CSG for complex shapes
-    const extrudeSettings = {
-        steps: 2,
-        depth: 0.2,
-        bevelEnabled: true,
-        bevelThickness: 0.05,
-        bevelSize: 0.05,
-        bevelSegments: 2,
+    const handleClick = () => {
+        setIsPickedUp(true);
     };
 
-    const baseGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    const baseMesh = new THREE.Mesh(baseGeometry);
+    useFrame((state, delta) => {
+        if (meshRef.current && isPickedUp && !disappear) {
+            // Move the piece upward and add rotation around the x-axis
+            meshRef.current.position.y += delta * 2; // Adjust speed of upward movement as needed
+            meshRef.current.rotation.x -= delta * 2; // Adjust speed of rotation to simulate being picked up
 
-    // Example of creating a nob using CSG, repeat for other nobs/holes
-    const nobGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.2, 8);
-    const nobMesh = new THREE.Mesh(nobGeometry);
-    nobMesh.position.set(0.25, 0, 0.1); // Adjust position accordingly
+            // Check if the piece has moved enough to disappear
+            if (meshRef.current.position.y > position[1] + 1) { // Adjust height as needed for the disappear condition
+                setDisappear(true);
+            }
+        }
+    });
 
-    // Use CSG to union the nob with the base piece
-    const csgBase = CSG.fromMesh(baseMesh);
-    const csgNob = CSG.fromMesh(nobMesh);
-    const unionGeometry = CSG.toMesh(csgBase.union(csgNob), baseMesh.matrix);
+    useEffect(() => {
+        if (disappear && meshRef.current) {
+            // Make the piece disappear, for example by setting visibility to false
+            meshRef.current.visible = false;
+        }
+    }, [disappear]);
 
-    unionGeometry.geometry.computeVertexNormals();
+    const baseGeometry = new THREE.BoxGeometry(1, 1, 0.1);
 
     return (
-        <mesh ref={meshRef} position={position} rotation={rotation} scale={scale} geometry={unionGeometry.geometry}>
-            <meshStandardMaterial color={'orange'} side={THREE.DoubleSide} />
+        <mesh onClick={handleClick} ref={meshRef} position={position} rotation={rotation} scale={scale} geometry={baseGeometry}>
+            <meshStandardMaterial map={texture} emissive={'#333333'} side={THREE.DoubleSide} />
         </mesh>
     );
 };
